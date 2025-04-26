@@ -34,7 +34,7 @@ def ensure_folder(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-#works in any case for any platform as long as you call hehe
+#works in any case for any platform as long as you call
 def get_context(platform: str):
 
     #setup
