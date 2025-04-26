@@ -1,6 +1,9 @@
 import argparse
 import requests
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
+import os
+import shutil
 
 def main():
     parser = argparse.ArgumentParser(description ='Provided User Info')
@@ -15,7 +18,50 @@ def main():
     
     data = [args.firstname, args.lastname, args.middlename, args.email, args.phonenumber]
     print(data)
-    internet_dork(data)
+    #internet_dork(data)
+    get_context("instagram")
+
+def read_links(filename: str):
+
+    links = []
+    with open(filename, 'r', encoding='utf-8') as file:
+        for line in file:
+            if line.startswith('http'):
+                links.append(line.strip())
+    return links
+
+def ensure_folder(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+#works in any case for any platform as long as you call hehe
+def get_context(platform: str):
+
+    #setup
+    links = read_links(f"{platform}_search_results.txt")
+    ensure_folder("user_data")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+        page = browser.new_page()
+
+        for i, url in enumerate(links, 1):
+            try:
+                page.goto(url, timeout=20000)  
+
+                response = input("Is this you? Take screenshot? (y/n): ").strip().lower()
+                if response == 'y':
+                    screenshot_name = f"{platform}_ss_{i}.png"
+                    page.screenshot(path=screenshot_name, full_page=True)
+                    shutil.move(screenshot_name, os.path.join("user_data", screenshot_name))
+                    print(f"Screenshot saved to: user_data/{screenshot_name}")
+                else:
+                    print("Skipped screenshot")
+
+            except Exception as e:
+                print(f"Failed to screenshot {url}: {e}")
+
+        browser.close()
 
 def internet_dork(data: list):
 
@@ -28,13 +74,17 @@ def internet_dork(data: list):
 
     # SEARCH QUERY
 
-    platforms = ['instagram', 'facebook', 'twitter', 'snapchat'] #add if you want diff platforms
+    platforms = ['instagram', 'facebook', 'twitter', 'snapchat', 'nothing'] #diff platform stuff
 
     for platform in platforms:
 
         print(f"\nSearching {platform.capitalize()} for: {query}")
 
-        url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)} site:{platform}.com"
+        if platform == "nothing":
+            url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)}"
+        else: 
+            url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)} site:{platform}.com"
+
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
         try:
